@@ -78,6 +78,7 @@ const getEntries = async (uid, name, api_token, link) => {
 };
 
 const fetchOrders = async () => {
+  let fetchedOrdersSum = 0;
   try {
     console.log(
       `\n\nЗагрузка заказов началась --- ${new Date().toLocaleDateString()} ${new Date().toLocaleTimeString()}\n\n`
@@ -91,14 +92,14 @@ const fetchOrders = async () => {
         if (orders.length === 0) {
           return;
         }
-        orders.forEach(async (item) => {
+        for (let item of orders) {
           const candidate = (
             await conn.query(
               `SELECT * FROM orders WHERE order_code = ${item.attributes.code}`
             )
           )[0][0];
           if (candidate) {
-            return;
+            continue;
           }
           const checkForUniqueOrderId = async () => {
             const nanoid = customAlphabet("1234567890", 8);
@@ -137,18 +138,19 @@ const fetchOrders = async () => {
             comment: "Создано ботом. 🤖",
             order_code: item.attributes.code,
           });
-        });
+          fetchedOrdersSum++;
+        }
       })
     );
     setTimeout(fetchOrders, updateMinutes * 60 * 1000);
     console.log(
-      `\n\nЗагрузка заказов окончена --- ${new Date().toLocaleDateString()} ${new Date().toLocaleTimeString()} \nСледующая загрузка через ${updateMinutes} минут...\n\n`
+      `\n\nЗагрузка заказов окончена --- ${new Date().toLocaleDateString()} ${new Date().toLocaleTimeString()} \nВыгружено ${fetchedOrdersSum} заказов.\nСледующая загрузка через ${updateMinutes} минут...\n\n`
     );
   } catch (e) {
     console.log("\n", e);
     setTimeout(fetchOrders, updateMinutes * 60 * 1000);
     console.log(
-      `\n\nОшибка загрузки товаров --- ${new Date().toLocaleDateString()} ${new Date().toLocaleTimeString()} \nСледующая загрузка через ${updateMinutes} минут...\n\n`
+      `\n\nОшибка загрузки товаров --- ${new Date().toLocaleDateString()} ${new Date().toLocaleTimeString()} \nВыгружено ${fetchedOrdersSum} заказов.\nСледующая загрузка через ${updateMinutes} минут...\n\n`
     );
   }
 };
