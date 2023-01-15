@@ -1,0 +1,11 @@
+{
+  "updateMinutes": 15,
+  "kaspi_url": "http://194.187.245.10",
+  "dataBaseConfig": {
+    "host": "jackmarket.kz",
+    "port": "3306",
+    "user": "ordermanager",
+    "password": "localhosttrigger122",
+    "database": "ordermanager"
+  }
+}
