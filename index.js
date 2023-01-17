@@ -144,7 +144,6 @@ const fetchOrders = async () => {
         }
       })
     );
-    zkzk;
     console.log(
       `\n\nЗагрузка заказов окончена --- ${new Date().toLocaleDateString()} ${new Date().toLocaleTimeString()} \nВыгружено ${fetchedOrdersSum} заказов.\n\n`
     );
