@@ -133,7 +133,8 @@ const fetchOrders = async () => {
             delivery_price_for_customer: 0,
             sum: item.attributes.totalPrice,
             status: "NEW",
-            creation_date: new Date(item.attributes.creationDate),
+            // item.attributes.creationDate
+            creation_date: new Date(),
             manager: user.uid,
             is_kaspi: "true",
             order_id: item.id,
