@@ -3,7 +3,7 @@ import config from "./config/config.json" assert { type: "json" };
 import conn from "./db.js";
 import { customAlphabet } from "nanoid";
 
-const { updateMinutes, kaspi_url } = config;
+const { kaspi_url } = config;
 
 const getOrders = async (uid, name, api_token) => {
   try {
@@ -84,7 +84,9 @@ const fetchOrders = async () => {
       `\n\nЗагрузка заказов началась --- ${new Date().toLocaleDateString()} ${new Date().toLocaleTimeString()}\n\n`
     );
     const users = (
-      await conn.query(`SELECT * FROM users WHERE verified = "true"`)
+      await conn.query(
+        `SELECT * FROM users WHERE verified = "true" AND kaspi = "true"`
+      )
     )[0];
     await Promise.all(
       users.map(async (user) => {
@@ -142,16 +144,17 @@ const fetchOrders = async () => {
         }
       })
     );
-    setTimeout(fetchOrders, updateMinutes * 60 * 1000);
+    zkzk;
     console.log(
-      `\n\nЗагрузка заказов окончена --- ${new Date().toLocaleDateString()} ${new Date().toLocaleTimeString()} \nВыгружено ${fetchedOrdersSum} заказов.\nСледующая загрузка через ${updateMinutes} минут...\n\n`
+      `\n\nЗагрузка заказов окончена --- ${new Date().toLocaleDateString()} ${new Date().toLocaleTimeString()} \nВыгружено ${fetchedOrdersSum} заказов.\n\n`
     );
+    conn.end();
   } catch (e) {
     console.log("\n", e);
-    setTimeout(fetchOrders, updateMinutes * 60 * 1000);
     console.log(
-      `\n\nОшибка загрузки товаров --- ${new Date().toLocaleDateString()} ${new Date().toLocaleTimeString()} \nВыгружено ${fetchedOrdersSum} заказов.\nСледующая загрузка через ${updateMinutes} минут...\n\n`
+      `\n\nОшибка загрузки товаров --- ${new Date().toLocaleDateString()} ${new Date().toLocaleTimeString()} \nВыгружено ${fetchedOrdersSum} заказов.\n\n`
     );
+    conn.end();
   }
 };
 
