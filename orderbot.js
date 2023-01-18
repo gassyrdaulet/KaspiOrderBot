@@ -1,6 +1,6 @@
 import { fork } from "child_process";
 
-const restartEveryXSeconds = 10;
+const restartEveryXSeconds = 300;
 
 function restart() {
   const app = fork("index.js");
