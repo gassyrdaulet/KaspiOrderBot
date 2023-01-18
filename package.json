@@ -7,6 +7,7 @@
   "scripts": {
     "start": "node index.js",
     "dev": "nodemon index.js",
+    "devbot": "nodemon orderbot.js",
     "test": "nodemon test.js"
   },
   "keywords": [],
