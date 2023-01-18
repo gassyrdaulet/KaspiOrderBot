@@ -36,7 +36,7 @@ const getOrders = async (uid, name, api_token) => {
     const filteredPickup = pickup.data.data.filter(
       (item) => !item.attributes.isKaspiDelivery
     );
-    return [...delivery.data.data, ...filteredPickup];
+    return [...delivery.data.data];
   } catch (e) {
     console.log(`<${uid}>${name}: Ошибка!`, e.response?.data?.message);
     return [];
