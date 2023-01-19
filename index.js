@@ -43,6 +43,33 @@ const getOrders = async (uid, name, api_token) => {
   }
 };
 
+const getCancelledOrders = async (uid, name, api_token) => {
+  try {
+    const cancelled = await axios.get(kaspi_url + "/shop/api/v2/orders", {
+      headers: {
+        "Content-Type": "application/vnd.api+json",
+        "X-Auth-Token": api_token,
+      },
+      params: {
+        "page[number]": 0,
+        "page[size]": 100,
+        "filter[orders][state]": "ARCHIVE",
+        "filter[orders][status]": "CANCELLED",
+        "filter[orders][creationDate][$ge]":
+          Date.now() - 1 * 24 * 60 * 60 * 1000,
+      },
+    });
+    const filteredCancelled = cancelled.data.data.filter(
+      (item) => !item.attributes.isKaspiDelivery
+    );
+    return filteredCancelled;
+  } catch (e) {
+    console.log(e);
+    console.log(`<${uid}>${name}: Ошибка!`, e.response?.data?.message);
+    return [];
+  }
+};
+
 const getEntries = async (uid, name, api_token, link) => {
   try {
     const { data: result } = await axios.get(link, {
@@ -79,6 +106,7 @@ const getEntries = async (uid, name, api_token, link) => {
 
 const fetchOrders = async () => {
   let fetchedOrdersSum = 0;
+  let cancelledOrdersSum = 0;
   try {
     console.log(
       `\n\nЗагрузка заказов началась --- ${new Date().toLocaleDateString()} ${new Date().toLocaleTimeString()}\n\n`
@@ -90,6 +118,33 @@ const fetchOrders = async () => {
     )[0];
     await Promise.all(
       users.map(async (user) => {
+        const cancelled = await getCancelledOrders(
+          user.uid,
+          user.name,
+          user.kaspi_token
+        );
+        for (let item of cancelled) {
+          const candidate = (
+            await conn.query(
+              `SELECT * FROM orders WHERE order_code = ${item.attributes.code}`
+            )
+          )[0][0];
+          if (!candidate) {
+            continue;
+          }
+          if (candidate.is_pickup === "true" || candidate.status === "NEW") {
+            await conn.query(`DELETE FROM orders WHERE uid = ${candidate.uid}`);
+            cancelledOrdersSum++;
+            continue;
+          }
+          if (candidate.status === "INDLVR") {
+            await conn.query(
+              `UPDATE orders SET status = "PRCANC" WHERE uid = ${candidate.uid}`
+            );
+            cancelledOrdersSum++;
+            continue;
+          }
+        }
         const orders = await getOrders(user.uid, user.name, user.kaspi_token);
         if (orders.length === 0) {
           return;
@@ -146,13 +201,13 @@ const fetchOrders = async () => {
       })
     );
     console.log(
-      `\n\nЗагрузка заказов окончена --- ${new Date().toLocaleDateString()} ${new Date().toLocaleTimeString()} \nВыгружено ${fetchedOrdersSum} заказов.\n\n`
+      `\n\nЗагрузка заказов окончена --- ${new Date().toLocaleDateString()} ${new Date().toLocaleTimeString()} \nВыгружено ${fetchedOrdersSum} заказов. \nОтменено ${cancelledOrdersSum} заказов. \n\n`
     );
     conn.end();
   } catch (e) {
     console.log("\n", e);
     console.log(
-      `\n\nОшибка загрузки товаров --- ${new Date().toLocaleDateString()} ${new Date().toLocaleTimeString()} \nВыгружено ${fetchedOrdersSum} заказов.\n\n`
+      `\n\nОшибка загрузки товаров --- ${new Date().toLocaleDateString()} ${new Date().toLocaleTimeString()} \nВыгружено ${fetchedOrdersSum} заказов. \nОтменено ${cancelledOrdersSum} заказов.\n\n`
     );
     conn.end();
   }

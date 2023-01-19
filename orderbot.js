@@ -2,6 +2,8 @@ import { fork } from "child_process";
 
 const restartEveryXSeconds = 300;
 
+console.log("\x1b[36m", "\nБот запущен...\n", "\x1b[0m");
+
 function restart() {
   const app = fork("index.js");
   app.on("close", () => {
