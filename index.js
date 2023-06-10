@@ -3,7 +3,7 @@ import config from "./config/config.json" assert { type: "json" };
 import conn from "./db.js";
 import { customAlphabet } from "nanoid";
 
-const { kaspi_url } = config;
+const { kaspi_url, store } = config;
 
 const getOrders = async (uid, name, api_token) => {
   try {
@@ -38,7 +38,10 @@ const getOrders = async (uid, name, api_token) => {
     );
     return [...delivery.data.data];
   } catch (e) {
-    console.log(`<${uid}>${name}: Ошибка!`, e.response?.data?.message);
+    console.log(
+      `<${uid}>${name}: Ошибка при получении активных заказов!`,
+      e.response?.data?.message ? e.response?.data?.message : e.message
+    );
     return [];
   }
 };
@@ -64,8 +67,10 @@ const getCancelledOrders = async (uid, name, api_token) => {
     );
     return filteredCancelled;
   } catch (e) {
-    console.log(e);
-    console.log(`<${uid}>${name}: Ошибка!`, e.response?.data?.message);
+    console.log(
+      `<${uid}>${name}: Ошибка при получении отмененных заказов!`,
+      e.response?.data?.message ? e.response?.data?.message : e.message
+    );
     return [];
   }
 };
@@ -100,7 +105,10 @@ const getEntries = async (uid, name, api_token, link) => {
     });
     return str;
   } catch (e) {
-    console.log(`<${uid}>${name}: Ошибка!`, e.response?.data?.message);
+    console.log(
+      `<${uid}>${name}: Ошибка при получении списка товаров!`,
+      e.response?.data?.message ? e.response?.data?.message : e.message
+    );
   }
 };
 
@@ -111,13 +119,26 @@ const fetchOrders = async () => {
     console.log(
       `\n\nЗагрузка заказов началась --- ${new Date().toLocaleDateString()} ${new Date().toLocaleTimeString()}\n\n`
     );
-    const users = (
+    const storeData = (
       await conn.query(
-        `SELECT * FROM users WHERE verified = "true" AND kaspi = "true"`
+        `SELECT * FROM stores WHERE activated = "true" and uid = "${store}"`
       )
-    )[0];
+    )[0][0];
+    const users = await Promise.all(
+      storeData.users.map(async (item) => {
+        if (item.kaspi) {
+          const userData = (
+            await conn.query(`SELECT * FROM users WHERE uid = "${item.uid}"`)
+          )[0][0];
+          return userData;
+        }
+      })
+    );
     await Promise.all(
       users.map(async (user) => {
+        if (!user) {
+          return;
+        }
         const cancelled = await getCancelledOrders(
           user.uid,
           user.name,
@@ -126,20 +147,22 @@ const fetchOrders = async () => {
         for (let item of cancelled) {
           const candidate = (
             await conn.query(
-              `SELECT * FROM orders WHERE order_code = ${item.attributes.code}`
+              `SELECT * FROM o_${store} WHERE order_code = ${item.attributes.code}`
             )
           )[0][0];
           if (!candidate) {
             continue;
           }
           if (candidate.is_pickup === "true" || candidate.status === "NEW") {
-            await conn.query(`DELETE FROM orders WHERE uid = ${candidate.uid}`);
+            await conn.query(
+              `DELETE FROM o_${store} WHERE uid = ${candidate.uid}`
+            );
             cancelledOrdersSum++;
             continue;
           }
           if (candidate.status === "INDLVR") {
             await conn.query(
-              `UPDATE orders SET status = "PRCANC" WHERE uid = ${candidate.uid}`
+              `UPDATE o_${store} SET status = "PRCANC" WHERE uid = ${candidate.uid}`
             );
             cancelledOrdersSum++;
             continue;
@@ -152,7 +175,7 @@ const fetchOrders = async () => {
         for (let item of orders) {
           const candidate = (
             await conn.query(
-              `SELECT * FROM orders WHERE order_code = ${item.attributes.code}`
+              `SELECT * FROM o_${store} WHERE order_code = ${item.attributes.code}`
             )
           )[0][0];
           if (candidate) {
@@ -161,8 +184,8 @@ const fetchOrders = async () => {
           const checkForUniqueOrderId = async () => {
             const nanoid = customAlphabet("1234567890", 8);
             const order_uid = nanoid();
-            const sql1 = `SELECT id FROM orders WHERE uid = '${order_uid}'`;
-            const sql2 = `SELECT id FROM finished_orders WHERE uid = '${order_uid}'`;
+            const sql1 = `SELECT id FROM o_${store} WHERE uid = '${order_uid}'`;
+            const sql2 = `SELECT id FROM f_${store} WHERE uid = '${order_uid}'`;
             const order_candidate = (await conn.query(sql1))[0][0];
             const finished_order_candidate = (await conn.query(sql2))[0][0];
             if (order_candidate || finished_order_candidate) {
@@ -179,7 +202,7 @@ const fetchOrders = async () => {
             item.relationships.entries.links.related
           );
           const address = item.attributes.deliveryAddress?.formattedAddress;
-          await conn.query(`INSERT INTO orders SET ?`, {
+          await conn.query(`INSERT INTO o_${store} SET ?`, {
             uid,
             goods,
             address: address ? address : "Самовывоз. Косшыгулулы 20.",
@@ -188,12 +211,15 @@ const fetchOrders = async () => {
             delivery_price_for_customer: 0,
             sum: item.attributes.totalPrice,
             status: "NEW",
-            // item.attributes.creationDate
             creation_date: new Date(),
             manager: user.uid,
             is_kaspi: "true",
             order_id: item.id,
-            comment: "Создано ботом. 🤖",
+            comment: `Дата создания заказа в Kaspi.kz: ${new Date(
+              item.attributes.creationDate
+            ).toLocaleDateString()} ${new Date(
+              item.attributes.creationDate
+            ).toLocaleTimeString()} . Создано ботом.`,
             order_code: item.attributes.code,
           });
           fetchedOrdersSum++;
@@ -205,7 +231,7 @@ const fetchOrders = async () => {
     );
     conn.end();
   } catch (e) {
-    console.log("\n", e);
+    console.log(e);
     console.log(
       `\n\nОшибка загрузки товаров --- ${new Date().toLocaleDateString()} ${new Date().toLocaleTimeString()} \nВыгружено ${fetchedOrdersSum} заказов. \nОтменено ${cancelledOrdersSum} заказов.\n\n`
     );

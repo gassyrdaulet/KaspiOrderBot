@@ -1,11 +1,12 @@
 {
+  "store": "61438938",
   "updateMinutes": 10,
   "kaspi_url": "http://194.187.245.10",
   "dataBaseConfig": {
-    "host": "jackmarket.kz",
+    "host": "domper.kz",
     "port": "3306",
     "user": "ordermanager",
     "password": "localhosttrigger122",
-    "database": "ordermanager"
+    "database": "omanager"
   }
 }
