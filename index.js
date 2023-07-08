@@ -20,22 +20,22 @@ const getOrders = async (uid, name, api_token) => {
           Date.now() - 14 * 24 * 60 * 60 * 1000,
       },
     });
-    const pickup = await axios.get(kaspi_url + "/shop/api/v2/orders", {
-      headers: {
-        "Content-Type": "application/vnd.api+json",
-        "X-Auth-Token": api_token,
-      },
-      params: {
-        "page[number]": 0,
-        "page[size]": 100,
-        "filter[orders][state]": "PICKUP",
-        "filter[orders][creationDate][$ge]":
-          Date.now() - 14 * 24 * 60 * 60 * 1000,
-      },
-    });
-    const filteredPickup = pickup.data.data.filter(
-      (item) => !item.attributes.isKaspiDelivery
-    );
+    // const pickup = await axios.get(kaspi_url + "/shop/api/v2/orders", {
+    //   headers: {
+    //     "Content-Type": "application/vnd.api+json",
+    //     "X-Auth-Token": api_token,
+    //   },
+    //   params: {
+    //     "page[number]": 0,
+    //     "page[size]": 100,
+    //     "filter[orders][state]": "PICKUP",
+    //     "filter[orders][creationDate][$ge]":
+    //       Date.now() - 14 * 24 * 60 * 60 * 1000,
+    //   },
+    // });
+    // const filteredPickup = pickup.data.data.filter(
+    //   (item) => !item.attributes.isKaspiDelivery
+    // );
     return [...delivery.data.data];
   } catch (e) {
     console.log(
@@ -209,6 +209,7 @@ const fetchOrders = async () => {
             cellphone: "+7" + item.attributes.customer?.cellPhone,
             is_pickup: (item.attributes.state === "PICKUP") + "",
             delivery_price_for_customer: 0,
+            delivery_price_for_deliver: 1200,
             sum: item.attributes.totalPrice,
             status: "NEW",
             creation_date: new Date(),
