@@ -101,7 +101,7 @@ const getEntries = async (uid, name, api_token, link) => {
     );
     let str = "";
     array.forEach((item) => {
-      str += item.quantity + "шт. " + item.goodName;
+      str += item.quantity + "шт. " + item.goodName + " | ";
     });
     return str;
   } catch (e) {
