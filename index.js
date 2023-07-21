@@ -100,6 +100,9 @@ const getEntries = async (uid, name, api_token, link) => {
       })
     );
     let str = "";
+    if (array.length > 1) {
+      str += "⚠️ ";
+    }
     array.forEach((item) => {
       str += item.quantity + "шт. " + item.goodName + " | ";
     });
